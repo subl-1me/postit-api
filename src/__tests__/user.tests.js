@@ -18,12 +18,10 @@ describe('User routes tests', () => {
     })
 
     it('POST api/user -> create user', async() => {
-        // Hash password
-        let hash = await bcrypt.hash('carmensalinas', 3);
         const mockUser = {
             username: 'carmensalinas',
             email: 'carmensalinas@gmail.com',
-            password: hash
+            password: '12345'
         }
 
         supertest(app)
@@ -37,11 +35,10 @@ describe('User routes tests', () => {
     })
 
     it('GET api/user -> get all users', async() => {
-        const hash = await bcrypt.hash('somepassword', 3);
         const mockUser = {
             username: 'dinamita',
             email: 'dinamita@gmail.com',
-            password: hash
+            password: 'dinamita'
         }
 
         return supertest(app)
@@ -75,10 +72,31 @@ describe('User routes tests', () => {
         })
     })
 
+    it('PUT api/user/:userId -> update user', async() => {
+        const data = {
+            username: 'change',
+            email: 'change@change.com',
+            password: 'change'
+        }
+        const userId = 1;
+
+        return supertest(app)
+        .put('/api/user/' + userId)
+        .send(data)
+        .then((response) => {
+            const { status, message } = response.body;
+            console.log(response.body);
+            expect(status).toBe(200);
+            expect(message).toBe('OK');
+        })
+    })
+
     afterAll((done) => {
         db.destroy();
         done();
     })
+
+
 
     // it('POST api/user -> create user', async () => {
     //     const user = {

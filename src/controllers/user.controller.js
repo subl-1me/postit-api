@@ -39,6 +39,7 @@ const getUserById = async(req, res) => {
 
 const updateUser = async(req, res) => {
     const { userId } = req.params;
+    const data = req.body;
     if(!userId){
         return res.send({
             status: 200,
@@ -46,7 +47,7 @@ const updateUser = async(req, res) => {
         })
     }
 
-    const serviceResponse = await userService.updateItemById(userId);
+    const serviceResponse = await userService.updateItemById(userId, data);
     return res.send(serviceResponse);
 }
 
