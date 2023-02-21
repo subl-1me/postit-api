@@ -12,6 +12,7 @@ describe('User routes tests', () => {
                 console.log(err);
             }
 
+            // Before start, clear users' table
             db.query('TRUNCATE TABLE USERS');
             done(); 
         });
@@ -85,9 +86,28 @@ describe('User routes tests', () => {
         .send(data)
         .then((response) => {
             const { status, message } = response.body;
-            console.log(response.body);
             expect(status).toBe(200);
-            expect(message).toBe('OK');
+            expect(message).toBe('User updated successfully.');
+        })
+    })
+
+    it('PUT api/user/:userId -> Error trying to update an unexpected user property', async() => {
+        const mock_data = {
+            username: 'some-change',
+            warnings_count: 50, // invalid property
+            friends: 100, // invalid property
+            email: 'changes@arecool.com'
+        }
+
+        return supertest(app)
+        .put('/api/user/' + '1')
+        .send(mock_data)
+        .then((response) => {
+            const { status, errorCode, message, invalidProperties } = response.body;
+            expect(status).toBe(200);
+            expect(errorCode).toBe(300);
+            expect(message).toBe('Unexpected invalid properties.');
+            
         })
     })
 
