@@ -2,7 +2,7 @@ const { verifyToken } = require('../helpers/jwt');
 const moment = require('moment');
 const UserError = require('../errors/UserError');
 
-const authenticate = (req, res, next) => {
+const authenticate = (req, _, next) => {
     const token = req.headers.authorization;
     if(!token) { 
         throw new UserError(301, 'Unauthorized.', 400) 
