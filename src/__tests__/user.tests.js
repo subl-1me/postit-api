@@ -12,18 +12,17 @@ describe('User routes tests', () => {
                 console.log(err);
             }
 
+            // Before start, clear users' table
             db.query('TRUNCATE TABLE USERS');
             done(); 
         });
     })
 
     it('POST api/user -> create user', async() => {
-        // Hash password
-        let hash = await bcrypt.hash('carmensalinas', 3);
         const mockUser = {
             username: 'carmensalinas',
             email: 'carmensalinas@gmail.com',
-            password: hash
+            password: '12345'
         }
 
         supertest(app)
@@ -37,11 +36,10 @@ describe('User routes tests', () => {
     })
 
     it('GET api/user -> get all users', async() => {
-        const hash = await bcrypt.hash('somepassword', 3);
         const mockUser = {
             username: 'dinamita',
             email: 'dinamita@gmail.com',
-            password: hash
+            password: 'dinamita'
         }
 
         return supertest(app)
@@ -75,10 +73,50 @@ describe('User routes tests', () => {
         })
     })
 
+    it('PUT api/user/:userId -> update user', async() => {
+        const data = {
+            username: 'change',
+            email: 'change@change.com',
+            password: 'change'
+        }
+        const userId = 1;
+
+        return supertest(app)
+        .put('/api/user/' + userId)
+        .send(data)
+        .then((response) => {
+            const { status, message } = response.body;
+            expect(status).toBe(200);
+            expect(message).toBe('User updated successfully.');
+        })
+    })
+
+    it('PUT api/user/:userId -> Error trying to update an unexpected user property', async() => {
+        const mock_data = {
+            username: 'some-change',
+            warnings_count: 50, // invalid property
+            friends: 100, // invalid property
+            email: 'changes@arecool.com'
+        }
+
+        return supertest(app)
+        .put('/api/user/' + '1')
+        .send(mock_data)
+        .then((response) => {
+            const { status, errorCode, message, invalidProperties } = response.body;
+            expect(status).toBe(200);
+            expect(errorCode).toBe(300);
+            expect(message).toBe('Unexpected invalid properties.');
+            
+        })
+    })
+
     afterAll((done) => {
         db.destroy();
         done();
     })
+
+
 
     // it('POST api/user -> create user', async () => {
     //     const user = {
