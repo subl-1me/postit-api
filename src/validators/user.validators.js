@@ -4,7 +4,7 @@ const db = require('../config/dbConnection');
 const validateUserData = async (user) => {
     const { username, email } = user;
 
-    // Check if username already exists
+    // Check if username or email already exists
     let validateErrors = [];
     let emailErrors = await checkDuplicatedEmail(email);
     let usernameErrors = await checkDuplicatedUsername(username);

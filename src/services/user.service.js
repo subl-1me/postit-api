@@ -3,7 +3,6 @@ const db = require('../config/dbConnection');
 const bcrypt = require('bcrypt');
 const UserError = require('../errors/UserError');
 
-
 /**
  * Create a new user object
  * @param {Array} User - { username, email, password } 
@@ -14,8 +13,6 @@ const insert = async(user) => {
     const hash = await bcrypt.hash(user.password, 3);
     user.password = hash;
     if(!hash) throw new Error('Unexpected error trying to hash password.')
-
-    throw new UserError(200, 'fuck', 300);
 
     // Save on data base
     return new Promise((resolve, reject) => {
@@ -98,6 +95,19 @@ const updateItemById = async(userId, data) => {
 }
 
 /**
+ * @param {Array} User - It may be username or email and password
+ * @returns { String } - Token
+*/
+const login = async(user) => {
+    return new Promise((resolve, reject) => {
+        const { email, password, username } = user;
+
+        resolve('ok');
+    })
+}
+
+
+/**
  * Check if there is an invalid property to update in user schema
  * @param {String} Properties - They must be: username, email or password
  * @returns { Array } Invalid properties found
@@ -118,9 +128,62 @@ const hasInvalidProperty = (properties) => {
     return invalidProperties;
 }
 
+/**
+ * It checks if username and password recieved match with an existing user
+ * @param {*} user 
+ * @Returns An array response that can contain errors or user data
+ */
+const userAuthChecker = async(userRecieved) => {
+
+    const getUser = () => {
+        return new Promise((resolve, reject) => {
+            let sql = "SELECT * FROM users WHERE username = ?";
+            db.query(sql, [userRecieved.username], (error, result) => {
+                if(error){ reject(error.message) }
+
+                resolve(result);
+            })
+        })
+    }   
+
+    const data = await getUser();
+    const dataParsed = JSON.parse(JSON.stringify(data));
+
+    return {
+        status: 200,
+        isDataValid: true,
+        user: dataParsed[0],
+        errors: []
+    }
+}
+
+/**
+ * Delete an item by ID
+ * @param { string } - User ID
+ * @return { Array } - Returns an http code and OK as response
+ */
+const deleteItem = async(id) => {
+    return new Promise((resolve, reject) => {
+        let sql = "DELETE FROM users WHERE id = ?"
+        db.query(sql, [id], (err, result) => {
+            if(err) { reject(err); }
+
+            resolve({
+                status: 200,
+                message: 'User deleted successfully',
+                sqlMessage: result
+            });
+        })
+    })
+}
+
+
 module.exports = {
     insert,
     items,
     itemById,
-    updateItemById
+    updateItemById,
+    login,
+    userAuthChecker,
+    deleteItem
 }

@@ -1,7 +1,9 @@
+require('dotenv').config();
 const supertest = require('supertest');
 const app = require('../../app');
 const db = require('../config/dbConnection');
-const bcrypt = require('bcrypt');
+const jwt = require('jwt-simple');
+const JWT_KEY = process.env.JWT_KEY;
 
 describe('User routes tests', () => {
 
@@ -25,7 +27,7 @@ describe('User routes tests', () => {
             password: '12345'
         }
 
-        supertest(app)
+        return supertest(app)
         .post('/api/user')
         .send(mockUser)
         .then((response) => {
@@ -36,26 +38,13 @@ describe('User routes tests', () => {
     })
 
     it('GET api/user -> get all users', async() => {
-        const mockUser = {
-            username: 'dinamita',
-            email: 'dinamita@gmail.com',
-            password: 'dinamita'
-        }
 
         return supertest(app)
-        .post('/api/user')
-        .send(mockUser)
+        .get('/api/user')
         .then((response) => {
-            expect(response.body.status).toBe(200);
-            supertest(app)
-            .get('/api/user')
-            .then((response) => {
-                const { status, users } = response.body;
-                expect(status).toBe(200);
-                expect(users).toBeDefined();
-                return;
-            })
-
+            const { status, users } = response.body;
+            expect(status).toBe(200);
+            expect(users).toBeDefined();
         })
     })
 
@@ -69,99 +58,108 @@ describe('User routes tests', () => {
             expect(user).toBeDefined();
             expect(user).toHaveProperty('username');
             expect(user).toHaveProperty('password');
+            expect(user.username).toBe('carmensalinas');
+            expect(user.email).toBe('carmensalinas@gmail.com');
             expect(user.id).toBe(1);
         })
     })
 
     it('PUT api/user/:userId -> update user', async() => {
-        const data = {
-            username: 'change',
-            email: 'change@change.com',
-            password: 'change'
+        // login first to get token and be able to update user
+        let mockUserData = {
+            username: 'carmensalinas',
+            password: '12345'
         }
-        const userId = 1;
 
         return supertest(app)
-        .put('/api/user/' + userId)
-        .send(data)
-        .then((response) => {
-            const { status, message } = response.body;
+        .post('/api/user/login')
+        .send(mockUserData)
+        .then(async(response) => {
+            const { status, message, token } = response.body;
             expect(status).toBe(200);
-            expect(message).toBe('User updated successfully.');
+            expect(message).toBe('User authenticated successfully');
+            expect(token).toBeDefined();
+
+            // fields to change
+            let data = { username: 'vargas' }
+            const userId = 1;
+            return supertest(app)
+            .put('/api/user/' + userId)
+            .send(data)
+            .set('Authorization', token)
+            .then((response) => {
+                const { status, message } = response.body;
+                expect(status).toBe(200);
+                expect(message).toBe('User updated successfully.');
+            })
+        });
+
+
+    })
+
+    it('PUT api/user/:userId -> Error trying to update an invalid user property', async() => {
+        let mockUserData = {
+            username: 'vargas',
+            password: '12345'
+        }
+
+        // Login first
+        return supertest(app)
+        .post('/api/user/login')
+        .send(mockUserData)
+        .then(async(response) => {
+            const { status, message, token } = response.body;
+
+            expect(status).toBe(200);
+            expect(message).toBe('User authenticated successfully');
+            expect(token).toBeDefined();
+
+            const mock_data = {
+                username: 'some-change',
+                warnings_count: 50, // invalid property
+                friends: 100, // invalid property
+                email: 'changes@arecool.com'
+            }
+            return supertest(app)
+            .put('/api/user/' + '1')
+            .send(mock_data)
+            .set('Authorization', token)
+            .then((response) => {
+                const { status, errorCode, message } = response.body;
+                expect(status).toBe(200);
+                expect(errorCode).toBe(300);
+                expect(message).toBe('Unexpected invalid properties.');
+            })
         })
     })
 
-    it('PUT api/user/:userId -> Error trying to update an unexpected user property', async() => {
-        const mock_data = {
-            username: 'some-change',
-            warnings_count: 50, // invalid property
-            friends: 100, // invalid property
-            email: 'changes@arecool.com'
+    it('DELETE api/user/:userId - Destroy account', async() => {
+        let auth_data = {
+            username: 'vargas',
+            password: '12345',
         }
 
         return supertest(app)
-        .put('/api/user/' + '1')
-        .send(mock_data)
-        .then((response) => {
-            const { status, errorCode, message, invalidProperties } = response.body;
-            expect(status).toBe(200);
-            expect(errorCode).toBe(300);
-            expect(message).toBe('Unexpected invalid properties.');
-            
-        })
+        .post('/api/user/login')
+        .send(auth_data)
+        .then(async(response) => {
+            const { token } = response.body;
+            expect(token).toBeDefined();
+
+            return supertest(app)
+            .delete('/api/user/' + 1)
+            .set('Authorization', token)
+            .then((response) => {
+                const { status, message } = response.body;
+                expect(status).toBe(200);
+                expect(message).toBe('User deleted successfully');
+            })
+        });
     })
 
     afterAll((done) => {
         db.destroy();
         done();
     })
-
-
-
-    // it('POST api/user -> create user', async () => {
-    //     const user = {
-    //         username: 'bizarrp',
-    //         email: 'mariquete@gmail.com',
-    //         password: 12345
-    //     }
-
-    //     return supertest(app)
-    //     .post('/api/user')
-    //     .send(user)
-    //     .then((response) => {
-    //         console.log(response.body);
-    //         const status = response.body.status;
-    //         const message = response.body.message;
-    //         expect(status).toEqual(200);
-    //         expect(message).toEqual('OK');
-    //     })  
-    // })  
-
-    // it('GET /user -> get all users', async() => {
-    //     return supertest(app)
-    //     .get('/api/user')
-    //     .expect('Content-Type', /json/)
-    //     .then((response) => {
-    //         const status = response.body.status;
-    //         expect(status).toEqual(200);
-    //     })
-    // })
-
-    // it('GET /user/:id -> Get user by ID', async() => {
-
-    // })
-
-    // it('PUT /user -> update user by ID', async() => {
-
-    //     return supertest(app)
-    //     .put('/api/user')
-    //     .then((response) => {
-    //         const { status, message, updatedUser } = response.body;
-    //         expect(status).toBe(200);
-    //         expect(message).toBe('OK');
-    //         expect(updatedUser).to
-    //     })
-    // })
-
 })
 

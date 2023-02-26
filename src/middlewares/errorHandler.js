@@ -11,9 +11,8 @@ const errorHandler = (error, _req, res, next) => {
         })
     }
 
-    console.log(error);
     return res.status(500).send({
-        message: 'Unexpected server error',
+        message: 'Unexpected error',
         err: error.message
     })
 }
