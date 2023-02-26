@@ -1,5 +1,6 @@
 const userService = require('../services/user.service');
 const userValidator = require('../validators/user.validators');
+const jwt = require('../helpers/jwt');
 
 const addUser = async(req, res) => {
     const user  = req.body;
@@ -51,10 +52,44 @@ const updateUser = async(req, res) => {
     return res.send(serviceResponse);
 }
 
+const login = async(req, res) => {
+    const user = req.body;
+    const checkerResponse = await userService.userAuthChecker(user);
+    if(!checkerResponse.isDataValid){
+        return res.send({
+            status: 200,
+            isDataValid: checkerResponse.valid,
+            errors: checkerResponse.errors
+        })
+    }
+
+    const token = jwt.createToken(checkerResponse.user);
+    return res.send({
+        status: 200,
+        message: 'User authenticated successfully',
+        token: token
+    })
+}
+
+const deleteUser = async(req, res) => {
+    const { userId } = req.params;
+    if(!userId) {
+        return res.send({
+            status: 200,
+            error: 'User ID is required.'
+        })
+    }
+
+    const serviceResponse = await userService.deleteItem(userId);
+    return res.send(serviceResponse);
+}
+
 
 module.exports = {
     addUser,
     getUsers,
     getUserById,
-    updateUser
+    updateUser,
+    login,
+    deleteUser
 }

@@ -1,7 +1,8 @@
+require('dotenv').config();
 const jwt = require('jwt-simple');
 const moment = require('moment');
 
-const key = '@@=awesome-key-to-encrpy-515151515-@@!!';
+const key = process.env.JWT_KEY;
 
 const createToken = (user) => {
     const payload = {
