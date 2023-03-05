@@ -1,20 +1,11 @@
 const userService = require('../services/user.service');
-const userValidator = require('../validators/user.validators');
 const jwt = require('../helpers/jwt');
+const bcrypt = require('bcrypt');
+
 
 const addUser = async(req, res) => {
     const user  = req.body;
 
-    // Validate duplicated username or email case
-    const validatingErrors = await userValidator(user);
-    if(validatingErrors.length > 0){
-        return res.send({
-            status: 200,
-            errors: validatingErrors
-        })
-    }
-
-    // If validate is OK
     const serviceResponse = await userService.insert(user);
     return res.send(serviceResponse);
 }
@@ -33,7 +24,7 @@ const getUserById = async(req, res) => {
         })
     } 
 
-    const serviceResponse = await userService.itemById(userId);
+    const serviceResponse = await userService.getUserBy('_id', userId);
     return res.send(serviceResponse);
 
 }
@@ -48,25 +39,35 @@ const updateUser = async(req, res) => {
         })
     }
 
-    const serviceResponse = await userService.updateItemById(userId, data);
+    const serviceResponse = await userService.updateItem(userId, data);
     return res.send(serviceResponse);
 }
 
 const login = async(req, res) => {
-    const user = req.body;
-    const checkerResponse = await userService.userAuthChecker(user);
-    if(!checkerResponse.isDataValid){
-        return res.send({
-            status: 200,
-            isDataValid: checkerResponse.valid,
-            errors: checkerResponse.errors
-        })
+    const data = req.body;
+    let serviceResponse;
+
+    // make sure if user exists by looking for a valid email or username
+    if(data.username){
+        serviceResponse = await userService.getUserBy('username', data.username);
+    }else{
+        serviceResponse = await userService.getUserBy('email', data.email);
     }
 
-    const token = jwt.createToken(checkerResponse.user);
+    if(serviceResponse.user.length === 0){ 
+        return res.send(serviceResponse)
+    }
+
+    let result = await bcrypt.compare(data.password, serviceResponse.user.password);
+    if(!result){
+        return res.send({ status: 200, message: 'Invalid password' })
+    }
+
+    const token = jwt.createToken(serviceResponse.user);
     return res.send({
         status: 200,
         message: 'User authenticated successfully',
+        user_id: serviceResponse.user._id,
         token: token
     })
 }

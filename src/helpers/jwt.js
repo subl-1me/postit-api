@@ -6,7 +6,7 @@ const key = process.env.JWT_KEY;
 
 const createToken = (user) => {
     const payload = {
-        _id: user.id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         iat: moment().unix(),

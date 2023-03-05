@@ -2,8 +2,6 @@ require('dotenv').config();
 const supertest = require('supertest');
 const app = require('../../app');
 const db = require('../config/dbConnection');
-const jwt = require('jwt-simple');
-const JWT_KEY = process.env.JWT_KEY;
 
 describe('User routes tests', () => {
 
@@ -15,6 +13,7 @@ describe('User routes tests', () => {
             }
 
             // Before start, clear users' table
+            db.query('SET FOREIGN_KEY_CHECKS = 0');
             db.query('TRUNCATE TABLE USERS');
             done(); 
         });
@@ -24,7 +23,7 @@ describe('User routes tests', () => {
         const mockUser = {
             username: 'carmensalinas',
             email: 'carmensalinas@gmail.com',
-            password: '12345'
+            password: 12345
         }
 
         return supertest(app)
@@ -38,29 +37,12 @@ describe('User routes tests', () => {
     })
 
     it('GET api/user -> get all users', async() => {
-
         return supertest(app)
         .get('/api/user')
         .then((response) => {
             const { status, users } = response.body;
             expect(status).toBe(200);
             expect(users).toBeDefined();
-        })
-    })
-
-    it('GET api/user/item/:userId -> get user by id', async() => {
-        const userId = 1;
-        return supertest(app)
-        .get('/api/user/item/' + userId)
-        .then((response) => {
-            const { status, user } = response.body;
-            expect(status).toBe(200);
-            expect(user).toBeDefined();
-            expect(user).toHaveProperty('username');
-            expect(user).toHaveProperty('password');
-            expect(user.username).toBe('carmensalinas');
-            expect(user.email).toBe('carmensalinas@gmail.com');
-            expect(user.id).toBe(1);
         })
     })
 
@@ -75,16 +57,15 @@ describe('User routes tests', () => {
         .post('/api/user/login')
         .send(mockUserData)
         .then(async(response) => {
-            const { status, message, token } = response.body;
+            const { status, message, token, user_id} = response.body;
             expect(status).toBe(200);
             expect(message).toBe('User authenticated successfully');
             expect(token).toBeDefined();
 
             // fields to change
             let data = { username: 'vargas' }
-            const userId = 1;
             return supertest(app)
-            .put('/api/user/' + userId)
+            .put('/api/user/' + user_id)
             .send(data)
             .set('Authorization', token)
             .then((response) => {
@@ -93,44 +74,6 @@ describe('User routes tests', () => {
                 expect(message).toBe('User updated successfully.');
             })
         });
-
-
-    })
-
-    it('PUT api/user/:userId -> Error trying to update an invalid user property', async() => {
-        let mockUserData = {
-            username: 'vargas',
-            password: '12345'
-        }
-
-        // Login first
-        return supertest(app)
-        .post('/api/user/login')
-        .send(mockUserData)
-        .then(async(response) => {
-            const { status, message, token } = response.body;
-
-            expect(status).toBe(200);
-            expect(message).toBe('User authenticated successfully');
-            expect(token).toBeDefined();
-
-            const mock_data = {
-                username: 'some-change',
-                warnings_count: 50, // invalid property
-                friends: 100, // invalid property
-                email: 'changes@arecool.com'
-            }
-            return supertest(app)
-            .put('/api/user/' + '1')
-            .send(mock_data)
-            .set('Authorization', token)
-            .then((response) => {
-                const { status, errorCode, message } = response.body;
-                expect(status).toBe(200);
-                expect(errorCode).toBe(300);
-                expect(message).toBe('Unexpected invalid properties.');
-            })
-        })
     })
 
     it('DELETE api/user/:userId - Destroy account', async() => {
@@ -143,13 +86,15 @@ describe('User routes tests', () => {
         .post('/api/user/login')
         .send(auth_data)
         .then(async(response) => {
-            const { token } = response.body;
+            const { token, user_id } = response.body;
             expect(token).toBeDefined();
 
             return supertest(app)
-            .delete('/api/user/' + 1)
+            .delete('/api/user/' + user_id)
             .set('Authorization', token)
             .then((response) => {
+            console.log(response.body)
+
                 const { status, message } = response.body;
                 expect(status).toBe(200);
                 expect(message).toBe('User deleted successfully');

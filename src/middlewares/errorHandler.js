@@ -1,6 +1,6 @@
 const UserError = require('../errors/UserError');
 
-const errorHandler = (error, _req, res, next) => {
+const errorHandler = (error, req, res, next) => {
     console.log('inside error handler');
     if(error instanceof UserError){
         return res.send({
@@ -11,8 +11,15 @@ const errorHandler = (error, _req, res, next) => {
         })
     }
 
+    if(error.sqlMessage){
+        return res.status(200).send({
+            message: 'Unexpected SQL error',
+            sqlErr: error.sqlMessage
+        })
+    }
+
     return res.status(500).send({
-        message: 'Unexpected error',
+        message: 'Unexpected server error',
         err: error.message
     })
 }
