@@ -2,6 +2,7 @@ const mysql = require('mysql');
 const db = require('../config/dbConnection');
 const bcrypt = require('bcrypt');
 const UserError = require('../errors/UserError');
+const { v4: uuidv4 } = require('uuid');
 
 /**
  * Create a new user object
@@ -9,22 +10,35 @@ const UserError = require('../errors/UserError');
  * @returns An http response status or error code
  */
 const insert = async(user) => { 
-    // Encrypt pw
-    const hash = await bcrypt.hash(user.password, 3);
-    user.password = hash;
-    if(!hash) throw new Error('Unexpected error trying to hash password.')
+    // make sure user doesnt exist
+    let data = await getUserBy('username', user.username);
+    if(data.user._id){
+        return {
+            status: 200,
+            message: 'Username already exists'
+        }
+    }
 
-    // Save on data base
-    return new Promise((resolve, reject) => {
-        db.query('INSERT INTO users SET ?', user, (err, _) => {
-            if(err){ reject(err.message) }
-    
-            resolve({
-                status: 200,
-                message: 'OK'
+    try{
+        // Encrypt pw
+        const hash = await bcrypt.hash(user.password, 3);
+        user.password = hash;
+        user._id = uuidv4();
+        // Save on data base
+        return new Promise((resolve, reject) => {
+            db.query('INSERT INTO users SET ?', user, (err, _) => {
+                if(err){ reject(err) }
+        
+                resolve({
+                    status: 200,
+                    message: 'OK'
+                })
             })
         })
-    })
+    }catch(err){
+        throw (err);
+    }
+
 }
 
 /**
@@ -45,64 +59,48 @@ const items = async() => {
     })
 }
 
-const itemById = async (id) => {
-    return new Promise((resolve, reject) => {
-        let sql = 'SELECT * FROM users WHERE id = ' + mysql.escape(id);
-        db.query(sql, (err, result) => {
-            if(err){ reject(err.message) }
-
-            resolve({
-                status: 200,
-                user: result[0]
-            })
-        })
-    })
-}
-
 /**
  * 
  * @param {String} userId 
  * @param {Array} data 
  * @returns {Array} - A successfully or invalid http response
  */
-const updateItemById = async(userId, data) => {
+const updateItem = async(userId, data) => {
+    // make sure user exists
+    let userData = await getUserBy('_id', userId);
+    if(!userData.user._id){
+        return {
+            status: 200,
+            err: 'User not found',
+            user: []
+        }
+    }
+
     return new Promise((resolve, reject) => {
         const properties = Object.getOwnPropertyNames(data);
 
         let invalidProperties = hasInvalidProperty(properties);
-        console.log(invalidProperties);
         if(invalidProperties.length > 0){
             throw new 
             UserError(300, 'Unexpected invalid properties.', 200, invalidProperties);
         }
 
-        for (const property of properties){
-            let sql = "UPDATE users SET " + property + ' = ? WHERE id = ' + mysql.escape(userId);
+        properties.forEach(async(property) => {
+            let sql = "UPDATE users SET " + property + ' = ? WHERE _id = ' + mysql.escape(userId);
             if(property === 'password') {
-                let hash = bcrypt.hash(data.password, 3);
+                data.password = String(data.password); // make sure we're recieving a string
+                let hash = await bcrypt.hash(data.password, 3);
                 data.password = hash;
             }
-            db.query(sql, data[property], (err, result) => {
-                if(err){ reject(err.message) }
+            db.query(sql, data[property], (err, _) => {
+                if(err){ reject(err) }
             })
-        }
+        })
 
         resolve({
             status: 200,    
             message: 'User updated successfully.'
         })
-    })
-}
-
-/**
- * @param {Array} User - It may be username or email and password
- * @returns { String } - Token
-*/
-const login = async(user) => {
-    return new Promise((resolve, reject) => {
-        const { email, password, username } = user;
-
-        resolve('ok');
     })
 }
 
@@ -113,6 +111,7 @@ const login = async(user) => {
  * @returns { Array } Invalid properties found
  */
 const hasInvalidProperty = (properties) => {
+    // _id generates itself by uuid package
     const validProperties = [
         'username',
         'email',    
@@ -128,34 +127,50 @@ const hasInvalidProperty = (properties) => {
     return invalidProperties;
 }
 
+
 /**
- * It checks if username and password recieved match with an existing user
- * @param {*} user 
- * @Returns An array response that can contain errors or user data
+ * Search an specific user following a filter
+ * @param {String} Filter - It may be: username, _id or email
+ * @param {String} Param - Contains what you want to search
+ * @returns An user object if exists or a not found message.
  */
-const userAuthChecker = async(userRecieved) => {
+const getUserBy = async(filter, param) => {
+    const availableFilters = [
+        '_id',
+        'username',
+        'email'
+    ]
 
-    const getUser = () => {
-        return new Promise((resolve, reject) => {
-            let sql = "SELECT * FROM users WHERE username = ?";
-            db.query(sql, [userRecieved.username], (error, result) => {
-                if(error){ reject(error.message) }
-
-                resolve(result);
-            })
-        })
-    }   
-
-    const data = await getUser();
-    const dataParsed = JSON.parse(JSON.stringify(data));
-
-    return {
-        status: 200,
-        isDataValid: true,
-        user: dataParsed[0],
-        errors: []
+    // make sure we're recieving a valid filter keyword
+    let filterResults = availableFilters.filter(tempFilter => tempFilter === filter);
+    if(filterResults.length === 0) { 
+        return {
+            status: 400,
+            message: 'Please, provide a valid filter keyword: _id, username or email',
+            invalidKeyword: filter,
+        }
     }
-}
+
+    let sql = "SELECT * FROM users WHERE " + filter + ' = ?';
+    return new Promise((resolve, reject) => {
+        db.query(sql, [param], (err, row) => {
+            if(err) { reject(err) }
+            if(row.length === 0){
+                resolve({ 
+                    status: 200,
+                    user: [],
+                    message: 'User not found'
+                });
+            }
+
+            user = JSON.parse(JSON.stringify(row));
+            resolve({
+                status: 200,
+                user: user[0]
+            });
+        })
+    })
+}   
 
 /**
  * Delete an item by ID
@@ -163,15 +178,24 @@ const userAuthChecker = async(userRecieved) => {
  * @return { Array } - Returns an http code and OK as response
  */
 const deleteItem = async(id) => {
+    // make sure user exists
+    let data = await getUserBy('_id', id);
+    if(!data.user._id){
+        return {
+            status: 200,
+            message: 'User does not exist',
+            user: []
+        }
+    }
+
     return new Promise((resolve, reject) => {
-        let sql = "DELETE FROM users WHERE id = ?"
+        let sql = "DELETE FROM users WHERE _id = ?"
         db.query(sql, [id], (err, result) => {
             if(err) { reject(err); }
 
             resolve({
                 status: 200,
                 message: 'User deleted successfully',
-                sqlMessage: result
             });
         })
     })
@@ -181,9 +205,7 @@ const deleteItem = async(id) => {
 module.exports = {
     insert,
     items,
-    itemById,
-    updateItemById,
-    login,
-    userAuthChecker,
+    updateItem,
+    getUserBy,
     deleteItem
 }
