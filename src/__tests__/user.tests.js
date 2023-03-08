@@ -93,8 +93,6 @@ describe('User routes tests', () => {
             .delete('/api/user/' + user_id)
             .set('Authorization', token)
             .then((response) => {
-            console.log(response.body)
-
                 const { status, message } = response.body;
                 expect(status).toBe(200);
                 expect(message).toBe('User deleted successfully');
