@@ -6,17 +6,9 @@ const db = require('../config/dbConnection');
 describe('User routes tests', () => {
 
     beforeAll((done) => {
-        db.connect((err) => {
-            if(err){
-                console.log('Error trying to connect to database');
-                console.log(err);
-            }
-
-            // Before start, clear users' table
-            db.query('SET FOREIGN_KEY_CHECKS = 0');
-            db.query('TRUNCATE TABLE USERS');
-            done(); 
-        });
+        db.query('SET FOREIGN_KEY_CHECKS = 0');
+        db.query('TRUNCATE TABLE users');
+        done();
     })
 
     it('POST api/user -> create user', async() => {
@@ -100,9 +92,6 @@ describe('User routes tests', () => {
         });
     })
 
-    afterAll((done) => {
-        db.destroy();
-        done();
-    })
+
 })
 

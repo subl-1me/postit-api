@@ -31,7 +31,8 @@ const insert = async(user) => {
         
                 resolve({
                     status: 200,
-                    message: 'OK'
+                    message: 'OK',
+                    userId: user._id
                 })
             })
         })
