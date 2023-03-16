@@ -3,14 +3,19 @@ const app = require('../../app');
 const db = require('../config/dbConnection');
 
 // mock data to test
-const mock_user = {
+let mock_user = {
+    _id: '',
     username: 'mock_usr1',
     email: 'mock_usr@gmail.com',
     password: '12345'
 }
 
-const mock_post = {
+let mock_post = {
     content: 'Me gusta comer huevitos con un chingo de chorizo',
+}
+
+let mock_post2 = {
+    content: 'this is a edited content',
 }
 
 let token = '';
@@ -64,7 +69,7 @@ describe('post routes tests', () => {
 
     it('PUT api/post/:postId - Update post by ID', async() => {
         return supertest(app) // create new mock post   
-        .post('/api/post' + mock_user._id)
+        .post('/api/post/' + mock_user._id)
         .send(mock_post)
         .set('Authorization', token)
         .then(async (response) => {
@@ -74,11 +79,12 @@ describe('post routes tests', () => {
 
             return supertest(app)
             .put('/api/post/' + post._id)
+            .send({ ownerId: mock_user._id, changes: { content: mock_post2.content }})
             .set('Authorization', token)
-            .then((response) => {
-                const { status, newPost, olderPost } = response.body;
-                console.log(response);
+            .then(async(response) => {
+                const { status, message } = response.body;
                 expect(status).toBe(200);
+                expect(message).toBe('Post updated successfully');
             })
         })
     })

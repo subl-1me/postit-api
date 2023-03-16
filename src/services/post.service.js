@@ -1,5 +1,6 @@
 const db = require('../config/dbConnection');
 const { v4: uuidv4 } = require('uuid');
+const mysql = require('mysql');
 
 const availableFilters = [
     'userId',
@@ -20,7 +21,7 @@ const insert = async(post, ownerId) => {
 
     return new Promise((resolve, reject) => {
         db.query(sql, post, (err, result) => {
-            if(err){ resolve(err); }
+            if(err){ reject(err); }
 
             resolve({
                 status: 200,
@@ -41,6 +42,22 @@ const insert = async(post, ownerId) => {
  * @returns {*} Items array
  */
 const items = async(filters) => {
+    // const { _id, usernane, sortType } = filters;
+    // if(_id){
+    //     return new Promise((resolve, reject) => {
+    //         db.query('SELECT * FROM posts WHERE _id = ?', _id, (err, result) => {
+    //             if(err) { reject(err) }
+
+    //             console.log(result);
+    //             resolve({
+    //                 status: 200,
+    //                 message: 'ok'
+    //             })
+    //         })
+    //     })
+    // }
+
+
     return new Promise((resolve, reject) => {
         db.query('SELECT * FROM posts', (err, row) => {
             if(err) { reject(err) }
@@ -55,13 +72,43 @@ const items = async(filters) => {
     })
 }
 
-const updateById = async(id) => {
-    console.log('authenticated...');
+/**
+ * Update a post by ID
+ * @param {String} postId - Post ID
+ * @param {Array} changes - Array of properties to update, they may be: content or images
+ * @returns Http response
+ */
+const updateById = async(postId, changes) => {
+    const properties = Object.getOwnPropertyNames(changes);
+
+    let promises = [];
+    properties.forEach((property) => {
+        let sql = "UPDATE posts SET " + String(property) + " = ? WHERE _id = " + mysql.escape(postId);
+        console.log(sql);
+        promises.push(createSqlUpdateQuery(sql, changes[property]));
+    })
+
+    await Promise.all(promises);
     return {
-        postId: id,
         status: 200,
-        message: 'OK'
+        message: 'Post updated successfully'
     }
+}
+
+/**
+ * Creates an udpate query
+ * @param {String} sql - SQL query string 
+ * @param {String} value - Value that contains the new data
+ * @returns SQL promise
+ */
+const createSqlUpdateQuery = async (sql, value) => {
+    return new Promise((resolve, reject) => {
+        db.query(sql, value, (err, result) => {
+            if(err) { reject(err) }
+
+            resolve(result);
+        })
+    })
 }
 
 

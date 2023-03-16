@@ -7,7 +7,6 @@ describe('User routes tests', () => {
 
     beforeAll((done) => {
         db.query('SET FOREIGN_KEY_CHECKS = 0');
-        db.query('TRUNCATE TABLE users');
         done();
     })
 

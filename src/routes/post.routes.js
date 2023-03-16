@@ -8,7 +8,7 @@ const tryCatch = require('../utils/tryCatch');
 
 // post - swagger
 router.post('/:ownerId', errorHandler, authenticate, tryCatch(postController.createPost));
-router.put('/:postId', errorHandler, authenticate, tryCatch(postController.updateById));
+router.put('/:postId', authenticate, errorHandler, tryCatch(postController.updateById));
 router.get('/', errorHandler, tryCatch(postController.getPosts));
 
 module.exports = router;

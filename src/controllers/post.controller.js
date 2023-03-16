@@ -16,12 +16,9 @@ const getPosts = async(req, res) => {
 
 const updateById = async(req, res) => {
     const { postId } = req.params;
+    const { changes } = req.body; // new post content, it may be content or attached images
 
-    return res.send({
-        status: 200,
-        postId: postId
-    })
-    const serviceResponse = await postService.updateById(postId);
+    const serviceResponse = await postService.updateById(postId, changes);
     return res.send(serviceResponse);
 }
 
