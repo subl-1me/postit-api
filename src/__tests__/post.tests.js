@@ -11,11 +11,11 @@ let mock_user = {
 }
 
 let mock_post = {
-    content: 'Me gusta comer huevitos con un chingo de chorizo',
+    content: 'This a content test :)))',
 }
 
 let mock_post2 = {
-    content: 'this is a edited content',
+    content: 'This a content update.',
 }
 
 let token = '';
@@ -85,6 +85,28 @@ describe('post routes tests', () => {
                 const { status, message } = response.body;
                 expect(status).toBe(200);
                 expect(message).toBe('Post updated successfully');
+            })
+        })
+    })
+
+    it('DELETE api/post/:postId - Delete post by ID', async() => {
+        return supertest(app) // create new mock post   
+        .post('/api/post/' + mock_user._id)
+        .send(mock_post)
+        .set('Authorization', token)
+        .then(async (response) => {
+            const { status, post } = response.body;
+            expect(status).toBe(200);
+            expect(post).toBeDefined();
+
+            return supertest(app)
+            .delete('/api/post/' + post._id)
+            .send({ownerId: post.ownerId})
+            .set('Authorization', token)
+            .then(async(response) => {
+                const { status, message } = response.body;
+                expect(status).toBe(200);
+                expect(message).toBe('Post deleted successfully');
             })
         })
     })

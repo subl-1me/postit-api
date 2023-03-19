@@ -1,4 +1,5 @@
 const postService = require('../services/post.service');
+const PostError = require('../errors/PostError');
 
 const createPost = async(req, res) => {
     const post = req.body;
@@ -22,8 +23,19 @@ const updateById = async(req, res) => {
     return res.send(serviceResponse);
 }
 
+const deleteById = async(req, res) => {
+    const { postId } = req.params;
+    if(!postId){
+        throw new PostError(500, 'Post ID is required', 400);
+    }
+
+    const serviceResponse = await postService.deleteItem(postId);
+    return res.send(serviceResponse);
+}
+
 module.exports = {
     createPost,
     getPosts,
-    updateById
+    updateById,
+    deleteById
 }

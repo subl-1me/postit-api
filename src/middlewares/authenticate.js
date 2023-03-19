@@ -1,35 +1,37 @@
 const { verifyToken } = require('../helpers/jwt');
 const moment = require('moment');
-const UserError = require('../errors/UserError');
+const AuthenticationError = require('../errors/AuthenticationError');
 
 const authenticate = async(req, res, next) => {
     try{
-        let token = req.headers.authorization;
+        const token = req.headers.authorization;
         if(!token) { 
-            throw new UserError(301, 'User is not authenticated', 401) 
+            throw new AuthenticationError(401, 'User is not authenticated', 401) 
         }
 
         const decodedToken = verifyToken(token);
         let now = moment().unix();
         if(now > decodedToken.exo){ // is token expired?
-            throw new UserError(302, 'Expired token. Please log in again.', 400);
+            throw new AuthenticationError(402, 'Expired token', 401);
         }
 
-        // make sure the owner is trying to update
-        if(req.route.methods.put){ 
-            // let { userId } = req.params;
-            // if(userId !== decodedToken._id){
-            //     throw new Error('Unauthorized')
-            // }
-            const { baseUrl } = req;
-            if(baseUrl === '/api/post'){ // it means update post
-                // we need to compare post ownerId to auth token id
-                const { ownerId } = req.body;
-                if(ownerId !== decodedToken._id){
-                    throw new UserError(303, 'This user is not authorized to realize that action', 401)
+        //TODO: Create delete req auth verification
+        // make sure the owner is trying to update or delete an item
+        const { baseUrl } = req;
+        if(req.route.methods.put || req.route.methods.delete){ 
+            if(baseUrl === '/api/user'){
+                const { userId } = req.params;
+                if(userId !== decodedToken._id){
+                    throw new AuthenticationError(403, 'Not authorized', 401)
                 }
             }
-            
+
+            if(baseUrl === '/api/post'){
+                const { ownerId } = req.body;
+                if(ownerId !== decodedToken._id){
+                    throw new AuthenticationError(404, 'Not authorized', 401)
+                }
+            }  
         }
 
         next();
@@ -37,5 +39,7 @@ const authenticate = async(req, res, next) => {
         next(err)
     }
 }
+
+
 
 module.exports = authenticate;

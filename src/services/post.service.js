@@ -10,17 +10,22 @@ const availableFilters = [
 const sortedBy = [
     'recent',
     'older',
-    'popular'
+    'mostLiked'
 ]
 
+/**
+ * Insert new item recieving its data and ownerId
+ * @param {Post} post 
+ * @param {String} ownerId 
+ * @returns 200 or SQL error
+ */
 const insert = async(post, ownerId) => {
-    // insert new post
     let sql = "INSERT INTO posts SET ?";
     post.ownerId = ownerId;
     post._id = uuidv4();
 
     return new Promise((resolve, reject) => {
-        db.query(sql, post, (err, result) => {
+        db.query(sql, post, (err, _result) => {
             if(err){ reject(err); }
 
             resolve({
@@ -34,8 +39,8 @@ const insert = async(post, ownerId) => {
 }
 
 /**
- * Get items list by a list of filters, they may be: 
- * userId, username, sortType (recent, older, top)
+ * Get items following a list of filters, they should be: 
+ * userId, username and sortType (recent, older, top)
  * @example { userId: 1234, sortType: 'recent' }
  * @example { username: 'example', sortType: 'older' }
  * @param {*} filters 
@@ -84,15 +89,40 @@ const updateById = async(postId, changes) => {
     let promises = [];
     properties.forEach((property) => {
         let sql = "UPDATE posts SET " + String(property) + " = ? WHERE _id = " + mysql.escape(postId);
-        console.log(sql);
         promises.push(createSqlUpdateQuery(sql, changes[property]));
     })
 
-    await Promise.all(promises);
-    return {
-        status: 200,
-        message: 'Post updated successfully'
+    try {
+        await Promise.all(promises);
+        return {
+            status: 200,
+            message: 'Post updated successfully'
+        }
+    }catch(err){
+        throw err;
     }
+
+
+}
+
+/**
+ * Delete an item by its ID
+ * @param {String} id 
+ * @returns 
+ */
+const deleteItem = (id) => {
+    let sql = "DELETE FROM posts WHERE _id = ?";
+    return new Promise((resolve, reject) => {
+        db.query(sql, [id], (err, _result) => {
+
+            if(err) { reject(err) }
+
+            resolve({
+                status: 200,
+                message: 'Post deleted successfully'
+            })
+        })
+    })
 }
 
 /**
@@ -115,5 +145,6 @@ const createSqlUpdateQuery = async (sql, value) => {
 module.exports = {
     insert,
     items,
-    updateById
+    updateById,
+    deleteItem
 }
