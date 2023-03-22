@@ -9,10 +9,10 @@ const createPost = async(req, res) => {
     return res.send(serviceResponse);
 }
 
-const getPosts = async(req, res) => {
-    const { filters } = req.body;
-    const serviceResponse = await postService.items(filters);
-    return res.send(serviceResponse);
+const getPostsBy = async(req, res) => {
+    const filter = req.body;
+    const serviceResponse = await postService.itemsBy(filter);
+    return res.status(serviceResponse.status).send(serviceResponse);
 }
 
 const updateById = async(req, res) => {
@@ -35,7 +35,7 @@ const deleteById = async(req, res) => {
 
 module.exports = {
     createPost,
-    getPosts,
+    getPostsBy,
     updateById,
     deleteById
 }

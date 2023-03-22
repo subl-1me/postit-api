@@ -2,6 +2,7 @@ const UserError = require('../errors/UserError');
 const AuthError = require('../errors/AuthenticationError');
 
 const errorHandler = (error, req, res, next) => {
+    console.log(error);
     if(error instanceof UserError){
         return res.status(error.status).send({
             status: 'error',
