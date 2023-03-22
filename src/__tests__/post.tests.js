@@ -60,10 +60,32 @@ describe('post routes tests', () => {
         return supertest(app)
         .get('/api/post')
         .then((response) => {
-
             const { status, posts } = response.body;
             expect(status).toBe(200);
             expect(posts).toBeDefined();
+        })
+    })
+
+    it('GET api/post - Get a post by ownerId', async() => {
+        return supertest(app)
+        .post('/api/post/' + mock_user._id)
+        .send(mock_post)
+        .set('Authorization', token)
+        .then(async (response) => {
+            const { status, post } = response.body;
+            expect(status).toBe(200);
+            expect(post).toBeDefined();
+
+            return supertest(app)
+            .get('/api/post')
+            .send({ownerId: mock_user._id}) // it may be ownerId or postId (_id)
+            .then(async (response) => {
+                console.log(response.body);
+                const { status, post, message } = response.body;
+                expect(status).toBe(200);
+                expect(message).toBe('OK');
+                expect(post).toBeDefined();
+            })
         })
     })
 

@@ -3,14 +3,8 @@ const { v4: uuidv4 } = require('uuid');
 const mysql = require('mysql');
 
 const availableFilters = [
-    'userId',
-    'username',
-]
-
-const sortedBy = [
-    'recent',
-    'older',
-    'mostLiked'
+    '_id',
+    'ownerId',
 ]
 
 /**
@@ -23,6 +17,7 @@ const insert = async(post, ownerId) => {
     let sql = "INSERT INTO posts SET ?";
     post.ownerId = ownerId;
     post._id = uuidv4();
+    post.likes = 0;
 
     return new Promise((resolve, reject) => {
         db.query(sql, post, (err, _result) => {
@@ -39,42 +34,64 @@ const insert = async(post, ownerId) => {
 }
 
 /**
- * Get items following a list of filters, they should be: 
- * userId, username and sortType (recent, older, top)
- * @example { userId: 1234, sortType: 'recent' }
- * @example { username: 'example', sortType: 'older' }
- * @param {*} filters 
+ * Get items by following a filter
+ * @example { ownerId: 'uuid-2ffd' } 
+ * @example { _id: 'uuid-223' }
+ * @param {*} filter It may be ownerId or postId
  * @returns {*} Items array
  */
-const items = async(filters) => {
-    // const { _id, usernane, sortType } = filters;
-    // if(_id){
-    //     return new Promise((resolve, reject) => {
-    //         db.query('SELECT * FROM posts WHERE _id = ?', _id, (err, result) => {
-    //             if(err) { reject(err) }
+const itemsBy = async(filter) => {
+    let properties = Object.getOwnPropertyNames(filter);
+    let sql = '';
 
-    //             console.log(result);
-    //             resolve({
-    //                 status: 200,
-    //                 message: 'ok'
-    //             })
-    //         })
-    //     })
-    // }
+    if(properties.length === 0){ // case no filters
+        sql = `SELECT * FROM posts`;
+        return new Promise((resolve, reject) => {
+            db.query(sql, (err, row) => {
+                if(err) { reject(err) }
 
-
-    return new Promise((resolve, reject) => {
-        db.query('SELECT * FROM posts', (err, row) => {
-            if(err) { reject(err) }
-
-            const posts = JSON.parse(JSON.stringify(row));
-            resolve({
-                status: 200,
-                message: 'OK',
-                posts: posts
+                resolve({
+                    status: 200,
+                    message: 'OK',
+                    posts: row
+                })
             })
         })
-    })
+    }else{
+
+        let invalidProperties = propertyChecker(properties);
+        if(invalidProperties.length !== 0){
+            return{
+                status: 400,
+                message: 'An invalid input was caught',
+                input: invalidProperties
+            }
+        }
+
+        const propertyToSearch = properties[0];
+        sql = "SELECT * FROM users WHERE ' + propertyToSearch + ' = ?";
+        return new Promise((resolve, reject) => {
+            db.query(sql, filter[propertyToSearch], (err, row) => {
+                if(err) { reject(err) }
+                // const posts = JSON.parse(JSON.stringify(row));
+                resolve({   
+                    status: 200,
+                    message: 'OK',
+                    post: row
+                })
+            })
+        })
+    }
+}
+
+const propertyChecker = (properties) => {
+    let invalidProperties = [];
+    for(const property of properties){
+        let match = availableFilters.find(_property => _property === property);
+        if(!match) invalidProperties.push(property);
+    }
+
+    return invalidProperties;
 }
 
 /**
@@ -144,7 +161,7 @@ const createSqlUpdateQuery = async (sql, value) => {
 
 module.exports = {
     insert,
-    items,
+    itemsBy,
     updateById,
     deleteItem
 }
