@@ -1,4 +1,4 @@
-const UserError = require('../errors/userError');
+const UserError = require('../errors/UserError');
 
 const userDataValidator = (req, res, next) => {
     const user = req.body;

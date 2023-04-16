@@ -128,50 +128,69 @@ const hasInvalidProperty = (properties) => {
     return invalidProperties;
 }
 
-
 /**
  * Search an specific user following a filter
- * @param {String} Filter - It may be: username, _id or email
- * @param {String} Param - Contains what you want to search
+ * @param {String} filter - It may be: username, _id or email
+ * @param {String} body - Contains what you want to search
  * @returns An user object if exists or a not found message.
  */
-const getUserBy = async(filter, param) => {
-    const availableFilters = [
-        '_id',
-        'username',
-        'email'
-    ]
-
-    // make sure we're recieving a valid filter keyword
-    let filterResults = availableFilters.filter(tempFilter => tempFilter === filter);
-    if(filterResults.length === 0) { 
-        return {
-            status: 400,
-            message: 'Please, provide a valid filter keyword: _id, username or email',
-            invalidKeyword: filter,
-        }
+const getUserBy = async(filter, body) => {
+    if(filter){
+        const sql = "SELECT * FROM users WHERE " + filter + ' = ?';
+        const queryRes = this.createSqlQuery(sql, body);
+        console.log(queryRes);
     }
 
-    let sql = "SELECT * FROM users WHERE " + filter + ' = ?';
-    return new Promise((resolve, reject) => {
-        db.query(sql, [param], (err, row) => {
-            if(err) { reject(err) }
-            if(row.length === 0){
-                resolve({ 
-                    status: 200,
-                    user: [],
-                    message: 'User not found'
-                });
-            }
 
-            user = JSON.parse(JSON.stringify(row));
-            resolve({
-                status: 200,
-                user: user[0]
-            });
+
+
+
+    // let sql = "SELECT * FROM users WHERE " + filter + ' = ?';
+    // return new Promise((resolve, reject) => {
+    //     db.query(sql, [param], (err, row) => {
+    //         if(err) { reject(err) }
+    //         if(row.length === 0){
+    //             resolve({ 
+    //                 status: 200,
+    //                 user: [],
+    //                 message: 'User not found'
+    //             });
+    //         }
+
+    //         user = JSON.parse(JSON.stringify(row));
+    //         resolve({
+    //             status: 200,
+    //             user: user[0]
+    //         });
+    //     })
+    // })
+}   
+
+const createSqlQuery = async(sql, body) => {
+    let values = [];
+    if(body){   
+        values = getBodyValues(body);
+    }
+
+    return new Promise((resolve, reject) => {
+        db.query(sql, values, (err, result) => {
+            if(err) { reject(err) }
+
+            resolve(result);
         })
     })
-}   
+}
+
+const getBodyValues = (body) => {
+    const properties = Object.getOwnPropertyNames(body);
+    console.log(properties);
+    let values = [];
+    properties.forEach(property => {
+        values.push(body[property]);
+    })
+
+    return values;
+}
 
 /**
  * Delete an item by ID
@@ -208,5 +227,6 @@ module.exports = {
     items,
     updateItem,
     getUserBy,
-    deleteItem
+    deleteItem,
+    createSqlQuery
 }

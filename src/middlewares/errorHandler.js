@@ -1,5 +1,6 @@
 const UserError = require('../errors/UserError');
 const AuthError = require('../errors/AuthenticationError');
+const ValidatorError = require('../errors/ValidatorError');
 
 const errorHandler = (error, req, res, next) => {
     console.log(error);
@@ -8,7 +9,16 @@ const errorHandler = (error, req, res, next) => {
             status: 'error',
             message: error.message,
             errorCode: error.errorCode,
-            invalidProperties: error.invalidProperties
+        })
+    }
+
+    if(error instanceof ValidatorError){
+        return res.status(error.statusCode).send({
+            errType: 'dev',
+            success: false,
+            message: error.message,
+            invalidProperties: error.invalidProperties,
+            bodyRecieved: req.body
         })
     }
 

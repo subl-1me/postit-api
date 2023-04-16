@@ -12,8 +12,8 @@ describe('User routes tests', () => {
 
     it('POST api/user -> create user', async() => {
         const mockUser = {
-            username: 'carmensalinas',
-            email: 'carmensalinas@gmail.com',
+            username: 'test',
+            email: 'test@gmail.com',
             password: 12345
         }
 
@@ -40,7 +40,7 @@ describe('User routes tests', () => {
     it('PUT api/user/:userId -> update user', async() => {
         // login first to get token and be able to update user
         let mockUserData = {
-            username: 'carmensalinas',
+            username: 'test',
             password: '12345'
         }
 
@@ -54,7 +54,7 @@ describe('User routes tests', () => {
             expect(token).toBeDefined();
 
             // fields to change
-            let data = { username: 'vargas' }
+            let data = { username: 'test2' }
             return supertest(app)
             .put('/api/user/' + user_id)
             .send(data)
@@ -69,7 +69,7 @@ describe('User routes tests', () => {
 
     it('DELETE api/user/:userId - Destroy account', async() => {
         let auth_data = {
-            username: 'vargas',
+            username: 'test2',
             password: '12345',
         }
 
@@ -89,6 +89,10 @@ describe('User routes tests', () => {
                 expect(message).toBe('User deleted successfully');
             })
         });
+    })
+
+    afterAll(() => {
+        db.query('TRUNCATE TABLE users');
     })
 
 

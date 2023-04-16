@@ -1,10 +1,9 @@
 class UserError extends Error{
-    constructor(errorCode, message, statusCode, invalidProperties){
+    constructor(errorCode, message, statusCode){
         super(message);
 
         this.errorCode = errorCode;
         this.statusCode = statusCode;
-        this.invalidProperties = invalidProperties;
     }
 }
 

@@ -5,6 +5,9 @@ const mysql = require('mysql');
 const availableFilters = [
     '_id',
     'ownerId',
+    'content',
+    'images',
+    'addLike'
 ]
 
 /**
@@ -87,7 +90,7 @@ const itemsBy = async(filter) => {
 const propertyChecker = (properties) => {
     let invalidProperties = [];
     for(const property of properties){
-        let match = availableFilters.find(_property => _property === property);
+        let match = availableFilters.find(prop => prop === property);
         if(!match) invalidProperties.push(property);
     }
 
@@ -102,6 +105,14 @@ const propertyChecker = (properties) => {
  */
 const updateById = async(postId, changes) => {
     const properties = Object.getOwnPropertyNames(changes);
+    const invalidProperties = propertyChecker(properties);
+    if(invalidProperties.length !== 0){
+        return{
+            success: false,
+            message: 'There are invalid properties',
+            properties: invalidProperties
+        }
+    }
 
     let promises = [];
     properties.forEach((property) => {
